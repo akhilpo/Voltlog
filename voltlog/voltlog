@@ -1,0 +1,66 @@
+#!/usr/bin/python
+"""\r\nVoltlog v0.1 alpha. Created by Akhil (@akhilpo).
+Simple voltage logger using Arduino. Connect the signal to log to A0 pin of arduino and point the --tty to the arduino's tty. Don't forget to flash the provided voltlog hex file to arduino. For more info, visit http://github.com/akhilpo/Voltlog
+Press 'Ctrl-c' to quit.
+
+Prerequisites: [Install with 'pip install ...']
+    docopt
+    pyserial
+
+Usage:
+    voltlog (-h | --help)
+    voltlog (-v | --version)
+    voltlog [-V] [-f <filename>] [-T <interval>] [-R <resolution>] -t <ttyname>
+
+Options:
+    -h --help                            Show this screen
+    -v --version                         Show version
+    -f <filename>, --file=<filename>     Append data to <filename>
+    -t <ttyname>, --tty=<ttyname>        TTY handler. eg: /dev/tty0
+    -T <interval>, --time=<interval>     Time interval between readings in seconds. [default: 1]
+    -R <resolution>, --res=<resolution>  Resolution of the ADC in Volts.
+    -V , --verbose                       Print data on screen
+"""
+
+try:
+    from docopt import docopt
+    import serial
+    from time import sleep,time   
+except ImportError:
+    print 'Missing a required package. Try "logger -h"'
+    quit()
+
+def writeData(data):
+    if arguments['--file']:
+        with open(arguments['--file'],'a') as f:
+            f.write(data) 
+            f.close()
+
+if __name__ == '__main__':
+    arguments = docopt(__doc__, version='Logger 0.1a')
+        
+    print arguments
+    ser = serial.Serial(arguments['--tty'], 9600, timeout=2)
+    ser.flush()
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
+    while True:
+        ser.write('a')
+        ser.flush()
+        serialdata = ser.readline()
+        #quit()
+        if serialdata:
+            if arguments['--res']:
+                voltage = str(int(serialdata) * float(arguments['--res']))
+                data = str(time()) + ', ' + serialdata.strip() + ', ' + voltage + '\r\n'
+            else:
+                data = str(time()) + ', ' + serialdata.strip() + '\r\n'
+            writeData(data)
+            if arguments['--verbose']:
+                print data
+            sleep(int(arguments['--time']))
+        else:
+            print 'ERROR: no data'
+    ser.close()
+
+
